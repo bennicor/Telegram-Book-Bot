@@ -6,18 +6,22 @@ from helpers import download_file_new_format, download_file_old_format
 import os
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-                     level=logging.INFO)
+                    level=logging.INFO)
 
 # Setting up bot
-updater = Updater(token="692790005:AAFTMUA9CEuC51lzmmJenGDJiPdtIRjanNo", use_context=True)
+updater = Updater(
+    token="692790005:AAFTMUA9CEuC51lzmmJenGDJiPdtIRjanNo", use_context=True)
 dispatcher = updater.dispatcher
 
 books = {}
 
 # Defining callback functions for handlers
+
+
 def start(update, context):
     # context.bot.send_message(chat_id=update.effective_chat.id, text="Введите название желаемой книги или автора.")
-    context.bot.send_document(chat_id=update.effective_chat.id, document=open("60411026.epub", "rb"), caption="test")
+    context.bot.send_document(chat_id=update.effective_chat.id, document=open(
+        "60411026.epub", "rb"), caption="test")
 
 # def inline_caps(update, context):
 #     query = update.inline_query.query
@@ -34,6 +38,7 @@ def start(update, context):
 
 #     context.bot.answer_inline_query(update.inline_query.id, results)
 
+
 def search_book(update, context):
     global books
     # Each separate user has it's own book list
@@ -48,17 +53,20 @@ def search_book(update, context):
         for book_id, book in books[username].items():
             message += f"<b>{book[0]}</b>\nСкачать книгу: /download{book_id}\n\n"
 
-    context.bot.send_message(chat_id=update.effective_chat.id, text=message, parse_mode=ParseMode.HTML)
+    context.bot.send_message(
+        chat_id=update.effective_chat.id, text=message, parse_mode=ParseMode.HTML)
+
 
 def download(update, context, book_id):
     global books
     username = update.message.chat.username
 
     try:
-        link = books[username][book_id][1]
+        link = books[username][book_id]['link']
         details = get_more(link)
 
         # Adding download links to global database variable in order to access it later
+        # TODO: remove/refactor 'magic numbers'
         if len(books[username][book_id]) == 2:
             books[username][book_id].append(details[3])
 
@@ -70,14 +78,18 @@ def download(update, context, book_id):
             message = f"<b>{details[0]}</b>\n{details[1]}\n\n{details[2]}"
 
         download_keyboard = [
-            list([InlineKeyboardButton(format[1][0], callback_data=f"{format[0]} {book_id}") for format in details[3].items()])
+            list([InlineKeyboardButton(
+                format[1][0], callback_data=f"{format[0]} {book_id}") for format in details[3].items()])
         ]
 
         reply_markup = InlineKeyboardMarkup(download_keyboard)
 
-        context.bot.send_message(chat_id=update.effective_chat.id, text=message, parse_mode=ParseMode.HTML, reply_markup=reply_markup)
+        context.bot.send_message(chat_id=update.effective_chat.id, text=message,
+                                 parse_mode=ParseMode.HTML, reply_markup=reply_markup)
     except Exception:
-        context.bot.send_message(chat_id=update.effective_chat.id, text="Книга не найдена")
+        context.bot.send_message(
+            chat_id=update.effective_chat.id, text="Книга не найдена")
+
 
 def button(update, context):
     global books
@@ -100,26 +112,31 @@ def button(update, context):
 
     # Sending file
     title = books[username][book_id][0]
-    context.bot.send_document(chat_id=update.effective_chat.id, document=open(filename, "rb"), caption=title)
+    context.bot.send_document(
+        chat_id=update.effective_chat.id, document=open(filename, "rb"), caption=title)
     # Deleting file after sending
     os.remove(filename)
 
+
 def unknown(update, context):
     command = update.message.text
-    
     if "download" in command:
         try:
-            book_id = int(command[1 + len("download"):len(command)])
+            book_id = int(command[8:])
             download(update, context, book_id)
         except Exception:
-            context.bot.send_message(chat_id=update.effective_chat.id, text="Извините, я не смог распознать введенную команду.")
+            context.bot.send_message(chat_id=update.effective_chat.id,
+                                     text="Извините, я не смог распознать введенную команду.")
     else:
-        context.bot.send_message(chat_id=update.effective_chat.id, text="Извините, я не смог распознать введенную команду.")
+        context.bot.send_message(chat_id=update.effective_chat.id,
+                                 text="Извините, я не смог распознать введенную команду.")
+
 
 # Adding commands and messages handlers
 dispatcher.add_handler(CommandHandler("start", start))
 dispatcher.add_handler(CallbackQueryHandler(button))
-dispatcher.add_handler(MessageHandler(Filters.text & (~Filters.command), search_book))
+dispatcher.add_handler(MessageHandler(
+    Filters.text & (~Filters.command), search_book))
 dispatcher.add_handler(MessageHandler(Filters.command, unknown))
 
 # inline_caps_handler = InlineQueryHandler(inline_caps)
