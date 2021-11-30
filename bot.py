@@ -2,7 +2,8 @@ from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, Inlin
 from telegram import InlineQueryResultArticle, InputTextMessageContent, ParseMode, InlineKeyboardButton, InlineKeyboardMarkup, File
 import logging
 from book_parser import get_book, get_more
-from helpers import download_file_new
+from helpers import download_file_new_format, download_file_old_format
+import os
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                      level=logging.INFO)
@@ -57,12 +58,16 @@ def download(update, context, book_id):
         link = books[username][book_id][1]
         details = get_more(link)
 
-        # Adding download links to global database variable to access it later
+        # Adding download links to global database variable in order to access it later
         if len(books[username][book_id]) == 2:
             books[username][book_id].append(details[3])
 
         # Preparing downlaod message
-        message = f"<b>{details[0]}</b>\n{details[1]}\n\n{details[2]}"
+        # Checking if it's a trial book
+        if "formats" in details[3][0][1]:
+            message = f"<b>{details[0]}</b>(пробная версия)\n{details[1]}\n\n{details[2]}"
+        else:
+            message = f"<b>{details[0]}</b>\n{details[1]}\n\n{details[2]}"
 
         download_keyboard = [
             list([InlineKeyboardButton(format[1][0], callback_data=f"{format[0]} {book_id}") for format in details[3].items()])
@@ -89,11 +94,15 @@ def button(update, context):
 
     # # Checking whether it's a new standard of file link or not
     if "formats" in file_link:
-        filename = download_file_new(file_link)
+        filename = download_file_new_format(file_link)
+    else:
+        filename = download_file_old_format(file_link)
 
     # Sending file
     title = books[username][book_id][0]
     context.bot.send_document(chat_id=update.effective_chat.id, document=open(filename, "rb"), caption=title)
+    # Deleting file after sending
+    os.remove(filename)
 
 def unknown(update, context):
     command = update.message.text

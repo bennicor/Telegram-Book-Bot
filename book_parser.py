@@ -48,10 +48,10 @@ def get_more(link):
 
     # Getting download links in all available formats, except html one(ain't working)
     formats = bpage.find("div", attrs={"class": "item_download item_info border_bottom"})
-    format_links = formats.find_all("a")
+    formats_links = formats.find_all("a")
 
     download, html = {}, False
-    for i, link in enumerate(format_links):
+    for i, link in enumerate(formats_links):
         format = link.text
         format_link = domain + link["href"]
 
