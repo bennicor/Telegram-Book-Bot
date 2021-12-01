@@ -1,8 +1,8 @@
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, InlineQueryHandler, CallbackQueryHandler
 from telegram import InlineQueryResultArticle, InputTextMessageContent, ParseMode, InlineKeyboardButton, InlineKeyboardMarkup, File
 import logging
-from book_parser import get_book, get_more
-from helpers import download_file_new_format, download_file_old_format
+from v1.book_parser import get_book, get_more
+from v1.helpers import download_file_new_format, download_file_old_format
 import os
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',

@@ -1,6 +1,6 @@
 from bs4 import BeautifulSoup
 import requests
-from helpers import fix_dict_order
+from v1.helpers import fix_dict_order
 
 
 def get_book(book):
