@@ -6,18 +6,30 @@ from setting import DOMAIN, TEMP_DIR
 from zipfile import ZipFile
 
 
-def pages_available():
-    pass
+def pages_available(book_name):
+    payload = {
+        'q': book_name
+    }
+    page = requests.get(
+        f'{DOMAIN}/pages/rmd_search_arts', params=payload).text
+    html = BeautifulSoup(page, 'html.parser')
+
+    pages = html.select("a.pager")
+    if not pages:
+        return 1
+
+    last_page = int(pages[-2].text)
+
+    return last_page
 
 
-def parse_books_on_page(book_name, page_num=1):
+def parse_books_on_page(book_name, page_num, book_index):
     result = {}
     payload = {
         'q': book_name
     }
-    page_num = '' if page_num == 1 else f'pagenum-{page_num}'
     page = requests.get(
-        f'{DOMAIN}/pages/rmd_search_arts/{page_num}', params=payload).text
+        f'{DOMAIN}/pages/rmd_search_arts/pagenum-{page_num}/', params=payload).text
     html = BeautifulSoup(page, 'html.parser')
 
     not_found = html.select_one('div.b_search p')
@@ -27,7 +39,7 @@ def parse_books_on_page(book_name, page_num=1):
     books_data = html.find_all(
         'li', attrs={'data-filter-class': "['notread']"})
 
-    for book_index, book_data in enumerate(books_data):
+    for book_data in books_data:
         link_data = book_data.find('a')['href']
         book_title = book_data.select_one('p.booktitle').text
         book_author = link_data.split('/')[2]
@@ -39,6 +51,8 @@ def parse_books_on_page(book_name, page_num=1):
                 'link': book_link,
                 'formats': ''
             }
+
+        book_index += 1
 
     return result
 
@@ -73,7 +87,7 @@ def parse_book_details(book_page_link):
         }
 
     if html_link:
-        download_links = fixed_dict(download_links)
+        download_links = fix_dict(download_links)
 
     book_trial = check_trial(download_links[0]['link'])
 
@@ -94,7 +108,7 @@ def check_trial(download_link):
     return False
 
 
-def fixed_dict(old_dict):
+def fix_dict(old_dict):
     new_dict = {}
 
     for index in old_dict.keys():
@@ -111,12 +125,13 @@ def translit_author(author):
     return translited_author
 
 
-def download_file_new_format(file_link):
-    page = requests.get(file_link).text
+def download_file_new_format(download_page_link, username):
+    page = requests.get(download_page_link).text
     html = BeautifulSoup(page, "html.parser")
 
-    filename = TEMP_DIR + file_link.split("/")[5]
-    format = file_link.split("/")[-1].split("=")[-1]
+    filename = TEMP_DIR + username + "_" + download_page_link.split("/")[5]
+    # Getting file's format from URL
+    format = download_page_link.split("/")[-1].split("=")[-1]
 
     # These formats are incorrect
     if format in ["a4.pdf", "a6.pdf"]:
@@ -137,8 +152,9 @@ def download_file_new_format(file_link):
     return filename
 
 
-def download_file_old_format(file_link):
-    filename = TEMP_DIR + file_link.split("/")[5]
+def download_file_old_format(file_link, username):
+    filename = TEMP_DIR + username + "_" + file_link.split("/")[5]
+    # Getting file's format from URL
     format = file_link.split("/")[-1][len("download."):]
     
     filename += "." + format
@@ -150,6 +166,7 @@ def download_file_old_format(file_link):
 
     return filename
 
+
 def extract_file(path):
     # Unpacking and delete archive
     with ZipFile(path, "r") as zip_obj:
@@ -159,7 +176,9 @@ def extract_file(path):
 
     return filename
 
+
 if __name__ == '__main__':
-    # print(parse_book_details('https://aldebaran.ru/author/goncharov_ivan/kniga_oblomov1859_ru/'))
-    # extract_file("3data.zip")
-    print(download_file_new_format("https://aldebaran.ru/download/buk_artem/kniga_voyina_sherifa_oblomova/?formats=epub"))
+    index = 0
+    for i in range(1, 11):
+        parse_books_on_page("тургенев", i, index)
+        index += 20

@@ -10,6 +10,7 @@ def start_bot():
     try:
         updater = Updater(token=TOKEN, use_context=True)
         dispatcher = updater.dispatcher
+
         dispatcher.add_handler(CommandHandler("start", start))
         dispatcher.add_handler(MessageHandler(
             Filters.text & (~Filters.command), search_book))
