@@ -1,5 +1,10 @@
-test1 = test2 = []
+from pymemcache.client import base
 
-test1.append("gbrjk")
+client = base.Client(("localhost", 11211))
 
-print(test1, test2)
+client.set('some_key', 'some value')
+
+# Retrieve previously set data again:
+value = client.get('some_key')
+
+print(value.decode("utf-8"))

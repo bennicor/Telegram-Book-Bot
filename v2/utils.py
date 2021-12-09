@@ -6,30 +6,13 @@ from setting import DOMAIN, TEMP_DIR
 from zipfile import ZipFile
 
 
-def pages_available(book_name):
-    payload = {
-        'q': book_name
-    }
-    page = requests.get(
-        f'{DOMAIN}/pages/rmd_search_arts', params=payload).text
-    html = BeautifulSoup(page, 'html.parser')
-
-    pages = html.select("a.pager")
-    if not pages:
-        return 1
-
-    last_page = int(pages[-2].text)
-
-    return last_page
-
-
-def parse_books_on_page(book_name, page_num, book_index):
+def parse_books_on_page(book_name):
     result = {}
     payload = {
         'q': book_name
     }
     page = requests.get(
-        f'{DOMAIN}/pages/rmd_search_arts/pagenum-{page_num}/', params=payload).text
+        f'{DOMAIN}/pages/rmd_search_arts/', params=payload).text
     html = BeautifulSoup(page, 'html.parser')
 
     not_found = html.select_one('div.b_search p')
@@ -39,7 +22,7 @@ def parse_books_on_page(book_name, page_num, book_index):
     books_data = html.find_all(
         'li', attrs={'data-filter-class': "['notread']"})
 
-    for book_data in books_data:
+    for book_index, book_data in enumerate(books_data):
         link_data = book_data.find('a')['href']
         book_title = book_data.select_one('p.booktitle').text
         book_author = link_data.split('/')[2]
@@ -51,8 +34,6 @@ def parse_books_on_page(book_name, page_num, book_index):
                 'link': book_link,
                 'formats': ''
             }
-
-        book_index += 1
 
     return result
 
@@ -67,17 +48,16 @@ def parse_book_details(book_page_link):
     # Getting rid of inner tags
     book_annotation.div.decompose()
 
-    download_formats = html.find('div', attrs={'class': 'item_download item_info border_bottom'})
-    download_formats = download_formats.find_all('a')
+    download_formats = html.find('div', attrs={'class': 'item_download item_info border_bottom'}).find_all("a")
 
     download_links = {}
     html_link = book_trial = False
     for link_index, link in enumerate(download_formats):
-        book_format = link.text
+        book_format = link.text.split(".")[0]
         book_format_download_link = f"{DOMAIN}{link['href']}"
 
         # Skipping this type of format
-        if book_format == 'html.zip':
+        if book_format == 'html':
             html_link = True
             continue
 

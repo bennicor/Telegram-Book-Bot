@@ -2,7 +2,7 @@ from telegram.ext import Updater, CallbackQueryHandler
 from telegram.ext.commandhandler import CommandHandler
 from telegram.ext.filters import Filters
 from telegram.ext.messagehandler import MessageHandler
-from handlers import button, search_book, start, unknown_command
+from handlers import buttons, search_book, start, unknown_command
 from setting import TOKEN
 
 
@@ -14,7 +14,7 @@ def start_bot():
         dispatcher.add_handler(CommandHandler("start", start))
         dispatcher.add_handler(MessageHandler(
             Filters.text & (~Filters.command), search_book))
-        dispatcher.add_handler(CallbackQueryHandler(button))
+        dispatcher.add_handler(CallbackQueryHandler(buttons))
         dispatcher.add_handler(MessageHandler(Filters.command, unknown_command))
 
         updater.start_polling()
