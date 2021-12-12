@@ -1,4 +1,7 @@
+# -*- coding: utf-8 -*-
+
 import os
+import re
 from bs4 import BeautifulSoup
 import requests
 from transliterate import translit
@@ -45,8 +48,9 @@ def parse_book_details(book_page_link):
     book_title = html.find('h1', attrs={'data-widget-litres-book': 1}).text
     book_author = html.find('a', attrs={'data-widget-litres-author': 1}).text
     book_annotation = html.find('div', id='book_annotation')
-    # Getting rid of inner tags
+    # Getting rid of garbage that can prevent parsing message
     book_annotation.div.decompose()
+    book_annotation = re.sub('<[^>]+>', '', book_annotation.text)
 
     download_formats = html.find('div', attrs={'class': 'item_download item_info border_bottom'}).find_all("a")
 
@@ -74,7 +78,7 @@ def parse_book_details(book_page_link):
     result = {
         'title': book_title,
         'author': book_author,
-        'annotation': book_annotation.text,
+        'annotation': book_annotation,
         'formats': download_links,
         'is_trial': book_trial
     }
@@ -158,7 +162,4 @@ def extract_file(path):
 
 
 if __name__ == '__main__':
-    index = 0
-    for i in range(1, 11):
-        parse_books_on_page("тургенев", i, index)
-        index += 20
+    print(parse_book_details("https://aldebaran.ru/author/goncharov_ivan/kniga_uchenie_ilyushi_otryivok_iz_romana_oblomov/"))

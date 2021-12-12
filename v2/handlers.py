@@ -8,29 +8,27 @@ from telegram import ParseMode
 from math import ceil
 
 
-books = {}
 def start(update, context):
     context.bot.send_message(chat_id=update.effective_chat.id,
                              text=START_MESSAGE)
 
 
 def search_book(update, context):
-    global books
-    username = update.message.chat.username
-    
     book_name = update.message.text
-    books[username] = parse_books_on_page(book_name)
-    
-    if books[username]:
-        pages = ceil(len(books[username]) / BOOKS_ON_PAGE)
+    # Saving query result into local user database
+    context.user_data["books"] = parse_books_on_page(book_name)
+    context.user_data["prev_page"] = 1
+
+    if context.user_data["books"]:
+        pages = ceil(len(context.user_data["books"]) / BOOKS_ON_PAGE)
         paginator = InlineKeyboardPaginator(pages)
 
         # Separating books on different pages, by the specified quantity
         page, books_counter = 1, 0
         paged_message = {}
-        temp_message = f"Найдено: {len(books[username])} книг\n\n"
+        temp_message = f"Найдено: {len(context.user_data['books'])} книг\n\n"
 
-        for book_id, book in books[username].items():
+        for book_id, book in context.user_data["books"].items():
             temp_message += f"<b>{book['title']}</b>\n{book['author']}\nСкачать книгу: /download{book_id}\n\n"
             books_counter += 1
             
@@ -42,24 +40,20 @@ def search_book(update, context):
     else:
         paged_message = 'Ничего не найдено'
     
-    books[username]["paginator_info"] = paged_message
+    context.user_data["books"]["paginator_info"] = paged_message
 
     context.bot.send_message(
         chat_id=update.effective_chat.id, text=paged_message[1], reply_markup=paginator.markup, parse_mode=ParseMode.HTML)
 
 
 def download(update, context, book_id):
-    global books
-
     try:
-        username = update.message.chat.username
-
-        book_page_link = books[username][book_id]['link']
+        book_page_link = context.user_data["books"][book_id]['link']
         book_details = parse_book_details(book_page_link)
 
         # Adding download links to chosen book
-        if not books[username][book_id]["formats"]:
-            books[username][book_id]["formats"] = book_details["formats"]
+        if not context.user_data["books"][book_id]["formats"]:
+            context.user_data["books"][book_id]["formats"] = book_details["formats"]
 
         if book_details['is_trial']:
             book_details['title'] += '(пробная версия)'
@@ -93,18 +87,18 @@ def pager_callback(update, context):
     query = update.callback_query
     query.answer()
 
-    username = update.callback_query.message.chat.username
     page = int(query.data.split()[1])
 
-    try:
+    # Checking if user've choosen same page
+    if page != context.user_data["prev_page"]:
+        context.user_data["prev_page"] = page
         paginator = InlineKeyboardPaginator(
-            len(books[username]["paginator_info"]),
+            len(context.user_data["books"]["paginator_info"]),
             current_page=page,
             data_pattern='{page}'
         )
 
-        page_text = books[username]["paginator_info"][page]
-        print(query)
+        page_text = context.user_data["books"]["paginator_info"][page]
         message_id = query.message.message_id
         context.bot.edit_message_text(
             chat_id=update.effective_chat.id,
@@ -113,13 +107,10 @@ def pager_callback(update, context):
             reply_markup=paginator.markup,
             parse_mode=ParseMode.HTML
         )
-    except Exception as e:
-        print("Pager error:", e)
+
 
 
 def downloader_callback(update, context):
-    global books
-
     try:
         # Closing buttons
         message_text = update.callback_query.message.text
@@ -142,7 +133,7 @@ def downloader_callback(update, context):
         # Getting which format user wants to get book in
         _, format_id, book_id = button_data.split()
         format_id, book_id = int(format_id), int(book_id)
-        file_link = books[username][book_id]["formats"][format_id]["link"]
+        file_link = context.user_data["books"][book_id]["formats"][format_id]["link"]
 
         # Checking whether it's a new standard of file link or not
         if "formats" in file_link:
@@ -154,7 +145,7 @@ def downloader_callback(update, context):
             filename = extract_file(filename)
             
         # Sending file
-        title = books[username][book_id]["title"]
+        title = context.user_data["books"][book_id]["title"]
         context.bot.send_document(
             chat_id=update.effective_chat.id, document=open(filename, "rb"), caption=title)
             
