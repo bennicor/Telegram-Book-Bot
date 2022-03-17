@@ -7,13 +7,13 @@ class InlineKeyboardPaginator:
     _keyboard = None
     _keyboard_before = None
 
-    first_page_label = '« {}'
-    previous_page_label = '‹ {}'
-    next_page_label = '{} ›'
-    last_page_label = '{} »'
-    current_page_label = '·{}·'
+    first_page_label = "« {}"
+    previous_page_label = "‹ {}"
+    next_page_label = "{} ›"
+    last_page_label = "{} »"
+    current_page_label = "·{}·"
 
-    def __init__(self, page_count, current_page=1, data_pattern='{page}'):
+    def __init__(self, page_count, current_page=1, data_pattern="{page}"):
         self._keyboard_before = []
         self._keyboard_after = []
 
@@ -34,12 +34,14 @@ class InlineKeyboardPaginator:
             self._keyboard = []
             return
         elif self.page_count <= 5:
-            for page in range(1, self.page_count+1):
+            for page in range(1, self.page_count + 1):
                 keyboard_dict[page] = page
         else:
             keyboard_dict = self._build_for_multi_pages()
 
-        keyboard_dict[self.current_page] = self.current_page_label.format(self.current_page)
+        keyboard_dict[self.current_page] = self.current_page_label.format(
+            self.current_page
+        )
 
         self._keyboard = self._to_button_array(keyboard_dict)
 
@@ -66,9 +68,11 @@ class InlineKeyboardPaginator:
         keyboard_dict = {}
 
         keyboard_dict[1] = self.first_page_label.format(1)
-        keyboard_dict[self.page_count-3] = self.previous_page_label.format(self.page_count-3)
+        keyboard_dict[self.page_count - 3] = self.previous_page_label.format(
+            self.page_count - 3
+        )
 
-        for page in range(self.page_count-2, self.page_count+1):
+        for page in range(self.page_count - 2, self.page_count + 1):
             keyboard_dict[page] = page
 
         return keyboard_dict
@@ -77,9 +81,13 @@ class InlineKeyboardPaginator:
         keyboard_dict = {}
 
         keyboard_dict[1] = self.first_page_label.format(1)
-        keyboard_dict[self.current_page-1] = self.previous_page_label.format(self.current_page-1)
+        keyboard_dict[self.current_page - 1] = self.previous_page_label.format(
+            self.current_page - 1
+        )
         keyboard_dict[self.current_page] = self.current_page
-        keyboard_dict[self.current_page+1] = self.next_page_label.format(self.current_page+1)
+        keyboard_dict[self.current_page + 1] = self.next_page_label.format(
+            self.current_page + 1
+        )
         keyboard_dict[self.page_count] = self.last_page_label.format(self.page_count)
 
         return keyboard_dict
@@ -94,7 +102,7 @@ class InlineKeyboardPaginator:
             keyboard.append(
                 InlineKeyboardButton(
                     text=str(keyboard_dict[key]),
-                    callback_data=f"pager {self.data_pattern.format(page=key)}"
+                    callback_data=f"pager {self.data_pattern.format(page=key)}",
                 )
             )
         return _buttons_to_dict(keyboard)
@@ -120,21 +128,19 @@ class InlineKeyboardPaginator:
         if not keyboards:
             return None
 
-        return json.dumps({'inline_keyboard': keyboards})
+        return json.dumps({"inline_keyboard": keyboards})
 
     def __str__(self):
         if self._keyboard is None:
             self._build()
-        return ' '.join(
-            [b['text'] for b in self._keyboard]
-        )
+        return " ".join([b["text"] for b in self._keyboard])
+
 
 def _buttons_to_dict(buttons):
     return [
         {
-            'text': button.text,
-            'callback_data': button.callback_data,
+            "text": button.text,
+            "callback_data": button.callback_data,
         }
-        for button
-        in buttons
+        for button in buttons
     ]
