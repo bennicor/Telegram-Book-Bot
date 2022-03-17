@@ -20,30 +20,34 @@ def search_book(update, context):
     context.user_data["prev_page"] = 1
 
     if context.user_data["books"]:
-        pages = ceil(len(context.user_data["books"]) / BOOKS_ON_PAGE)
+        books_found = len(context.user_data["books"])
+        pages = ceil(books_found / BOOKS_ON_PAGE)
         paginator = InlineKeyboardPaginator(pages)
 
-        # Separating books on different pages, by the specified quantity
+        # Separating books on different pages by specified quantity
         page, books_counter = 1, 0
         paged_message = {}
-        temp_message = f"Найдено: {len(context.user_data['books'])} книг\n\n"
+        temp_message = f"Найдено: {books_found} книг\n\n"
 
         for book_id, book in context.user_data["books"].items():
             temp_message += f"<b>{book['title']}</b>\n{book['author']}\nСкачать книгу: /download{book_id}\n\n"
             books_counter += 1
             
-            if books_counter == BOOKS_ON_PAGE:
+            # Display fixed amount of books on page,
+            # only if total amount is higher
+            if books_counter == BOOKS_ON_PAGE if books_found >= BOOKS_ON_PAGE else books_found: 
                 paged_message[page] = temp_message
                 books_counter = 0
                 page += 1
-                temp_message = ""
-    else:
-        paged_message = 'Ничего не найдено'
-    
-    context.user_data["books"]["paginator_info"] = paged_message
+                temp_message = f"Найдено: {books_found} книг\n\n"
 
-    context.bot.send_message(
-        chat_id=update.effective_chat.id, text=paged_message[1], reply_markup=paginator.markup, parse_mode=ParseMode.HTML)
+        context.user_data["books"]["paginator_info"] = paged_message
+
+        context.bot.send_message(
+            chat_id=update.effective_chat.id, text=paged_message[1], reply_markup=paginator.markup, parse_mode=ParseMode.HTML)
+    else:
+        context.bot.send_message(
+            chat_id=update.effective_chat.id, text='Ничего не найдено')
 
 
 def download(update, context, book_id):
@@ -109,7 +113,6 @@ def pager_callback(update, context):
         )
 
 
-
 def downloader_callback(update, context):
     try:
         # Closing buttons
@@ -134,6 +137,7 @@ def downloader_callback(update, context):
         _, format_id, book_id = button_data.split()
         format_id, book_id = int(format_id), int(book_id)
         file_link = context.user_data["books"][book_id]["formats"][format_id]["link"]
+        print(file_link)
 
         # Checking whether it's a new standard of file link or not
         if "formats" in file_link:

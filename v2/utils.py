@@ -29,7 +29,6 @@ def parse_books_on_page(book_name):
         link_data = book_data.find('a')['href']
         book_title = book_data.select_one('p.booktitle').text
         book_author = link_data.split('/')[2]
-        # book_author = translit_author(book_author)
         book_link = f'{DOMAIN}{link_data}'
         result[book_index] = {
                 'title': book_title,
@@ -101,14 +100,6 @@ def fix_dict(old_dict):
     return new_dict
 
 
-def translit_author(author):
-    # kruteckaya_valentina
-    translited_author = " ".join(author.split("_"))
-    translited_author = translit(translited_author, "ru").capitalize()
-
-    return translited_author
-
-
 def download_file_new_format(download_page_link, username):
     page = requests.get(download_page_link).text
     html = BeautifulSoup(page, "html.parser")
@@ -138,6 +129,7 @@ def download_file_new_format(download_page_link, username):
 
 def download_file_old_format(file_link, username):
     filename = TEMP_DIR + username + "_" + file_link.split("/")[5]
+    print("Filename", filename)
     # Getting file's format from URL
     format = file_link.split("/")[-1][len("download."):]
     
