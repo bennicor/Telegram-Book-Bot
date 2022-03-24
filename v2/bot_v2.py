@@ -1,24 +1,23 @@
-from telegram.ext import Updater, CallbackQueryHandler
-from telegram.ext.commandhandler import CommandHandler
-from telegram.ext.filters import Filters
-from telegram.ext.messagehandler import MessageHandler
+from aiogram import Bot, Dispatcher, executor
+from aiogram.dispatcher.filters import Text
 from handlers import buttons, search_book, start, command_handler
 from setting import TOKEN
+import asyncio
+import logging
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
 
 
 def start_bot():
     try:
-        updater = Updater(token=TOKEN, use_context=True)
-        dispatcher = updater.dispatcher
+        bot = Bot(token=TOKEN)
+        dispatcher = Dispatcher(bot)
 
-        dispatcher.add_handler(CommandHandler("start", start))
-        dispatcher.add_handler(
-            MessageHandler(Filters.text & (~Filters.command), search_book)
-        )
-        dispatcher.add_handler(CallbackQueryHandler(buttons))
-        dispatcher.add_handler(MessageHandler(Filters.command, command_handler))
+        dispatcher.register_message_handler(start, commands=["start"])
+        dispatcher.register_message_handler(command_handler, Text(startswith=["/"]))
+        dispatcher.register_message_handler(search_book, content_types="text")
+        dispatcher.register_callback_query_handler(buttons)
 
-        updater.start_polling()
-        updater.idle()
+        asyncio.run(executor.start_polling(dispatcher, skip_updates=True))
     except Exception as e:
-        print("Failed to start bot:", e)
+        logging.error("Failed to start bot", exc_info=True)

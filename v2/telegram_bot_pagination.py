@@ -1,6 +1,5 @@
 import json
-from telegram import InlineKeyboardButton
-
+from aiogram.types.inline_keyboard import InlineKeyboardButton
 
 class InlineKeyboardPaginator:
     _keyboard_after = None

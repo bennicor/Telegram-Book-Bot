@@ -4,12 +4,11 @@ import os
 import re
 from bs4 import BeautifulSoup
 import requests
-from transliterate import translit
 from setting import DOMAIN, TEMP_DIR
 from zipfile import ZipFile
 
 
-def parse_books_on_page(book_name):
+async def parse_books_on_page(book_name):
     result = {}
     payload = {"q": book_name}
     page = requests.get(f"{DOMAIN}/pages/rmd_search_arts/", params=payload).text
@@ -36,7 +35,7 @@ def parse_books_on_page(book_name):
     return result
 
 
-def parse_book_details(book_page_link):
+async def parse_book_details(book_page_link):
     page = requests.get(book_page_link).text
     html = BeautifulSoup(page, "html.parser")
 
@@ -100,7 +99,7 @@ def fix_dict(old_dict):
     return new_dict
 
 
-def download_file_new_format(download_page_link, chat_id):
+async def download_file_new_format(download_page_link, chat_id):
     page = requests.get(download_page_link).text
     html = BeautifulSoup(page, "html.parser")
 
@@ -126,7 +125,7 @@ def download_file_new_format(download_page_link, chat_id):
     return temp_filename
 
 
-def download_file_old_format(file_link, chat_id):
+async def download_file_old_format(file_link, chat_id):
     temp_filename = TEMP_DIR + str(chat_id) + "_" + file_link.split("/")[5]
 
     # Getting file's format from URL
@@ -142,7 +141,7 @@ def download_file_old_format(file_link, chat_id):
     return temp_filename
 
 
-def extract_file(path):
+async def extract_file(path):
     # Unpacking and delete archive
     with ZipFile(path, "r") as zip_obj:
         temp_filename = TEMP_DIR + zip_obj.namelist()[0]
