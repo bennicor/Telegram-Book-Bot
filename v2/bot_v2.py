@@ -1,6 +1,6 @@
 from aiogram import Bot, Dispatcher, executor
 from aiogram.dispatcher.filters import Text
-from handlers import buttons, search_book, start, command_handler
+from handlers import buttons, search_book, start, command_handler, inline_download
 from setting import TOKEN
 import asyncio
 import logging
@@ -16,6 +16,7 @@ def start_bot():
         dispatcher.register_message_handler(start, commands=["start"])
         dispatcher.register_message_handler(command_handler, Text(startswith=["/"]))
         dispatcher.register_message_handler(search_book, content_types="text")
+        dispatcher.register_inline_handler(inline_download)
         dispatcher.register_callback_query_handler(buttons)
 
         asyncio.run(executor.start_polling(dispatcher, skip_updates=True))

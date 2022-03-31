@@ -1,8 +1,14 @@
 DOMAIN = "https://aldebaran.ru"
-TOKEN = "692790005:AAFTMUA9CEuC51lzmmJenGDJiPdtIRjanNo"
+TOKEN = "692790005:AAFTMUA9CEuC51lzmmJenGDJiPdtIRjanNo" # Надо скрыть
 START_MESSAGE = "Для начала работы введите название книги или имя автора"
 UNKNOWN_COMMAND_MESSAGE = "Я не смог распознать введенную команду"
-DOWNLOAD_FAIL_MESSAGE = "Книга не найдена"
-COULDNT_DOWNLOAD_MESSAGE = "Не удалось получить информацию о книге"
+GET_BOOK_FAIL_MESSAGE = "Не удалось получить информацию о книге"
+DOWNLOAD_FAIL_MESSAGE = "Не удалось скачать книгу"
 TEMP_DIR = "temp\\"
 BOOKS_ON_PAGE = 6
+INLINE_BOOKS_SEARCH_QUANTITY = 5
+BOOKS_ON_DOMAIN_PAGE = 20
+INLINE_CACHE_TIME = 300 # For testing only. Default is set to 300
+INLINE_RAW_WIDTH = 3
+BOT_STORAGE_CHANNEL_ID = -1001697530176 # Надо скрыть
+CAPTION_LENGTH_LOCK = 1024
