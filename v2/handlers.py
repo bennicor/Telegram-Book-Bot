@@ -25,9 +25,6 @@ from telegram_bot_pagination import InlineKeyboardPaginator
 from aiogram.types.message import ParseMode
 from aiogram.types import (
     InlineKeyboardMarkup,
-    InputTextMessageContent,
-    InlineQueryResultArticle,
-    InlineQueryResultDocument,
     InlineQueryResultPhoto,
     InputMediaDocument,
 )
@@ -42,6 +39,7 @@ logging.basicConfig(
 # Creating bot instance to handle messages changes
 bot = Bot(token=TOKEN)
 books = {}  # Global dictionary where all users data is stored
+
 
 
 async def start(message):
@@ -132,6 +130,10 @@ async def download(message, book_id):
 
         download_keyboard = build_keyboard(book_details["formats"], book_id, "download", INLINE_RAW_WIDTH)
         reply_markup = InlineKeyboardMarkup(inline_keyboard=download_keyboard)
+
+        # Caption length must in range of 0-1024 symbols
+        if len(book_info) > CAPTION_LENGTH_LOCK:
+            book_info = book_info[:CAPTION_LENGTH_LOCK - 3] + "..."
 
         await bot.send_photo(
             chat_id=chat_id,

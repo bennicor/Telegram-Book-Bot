@@ -1,5 +1,5 @@
 DOMAIN = "https://aldebaran.ru"
-TOKEN = "Bot TOKEN"
+TOKEN = "Your BOT TOKEN"
 START_MESSAGE = "Для начала работы введите название книги или имя автора"
 UNKNOWN_COMMAND_MESSAGE = "Я не смог распознать введенную команду"
 GET_BOOK_FAIL_MESSAGE = "Не удалось получить информацию о книге"
@@ -12,3 +12,5 @@ INLINE_CACHE_TIME = 300
 INLINE_RAW_WIDTH = 3
 BOT_STORAGE_CHANNEL_ID = "Channel id where bot will send documents to cache them"
 CAPTION_LENGTH_LOCK = 1024 # Must be in range (0-1024)
+PROXY = {'http': 'http://194.5.193.183:80'} # Free proxy, may be obsolete in a few weeks
+HEADERS = "Your browser headers information. Can be found at https://httpbin.org/headers"

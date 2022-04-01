@@ -1,16 +1,17 @@
-from distutils.command.build import build
 import os
 import re
 from bs4 import BeautifulSoup
 import requests
-from setting import DOMAIN, TEMP_DIR, BOOKS_ON_DOMAIN_PAGE
+from setting import DOMAIN, TEMP_DIR, BOOKS_ON_DOMAIN_PAGE, PROXY, HEADERS
 from zipfile import ZipFile
 from aiogram.types import InlineKeyboardButton
+
 
 async def parse_books_on_page(book_name, quantity=BOOKS_ON_DOMAIN_PAGE):
     result = {}
     payload = {"q": book_name}
-    page = requests.get(f"{DOMAIN}/pages/rmd_search_arts/", params=payload).text
+    proxies, headers = PROXY, HEADERS
+    page = requests.get(f"{DOMAIN}/pages/rmd_search_arts/", params=payload, proxies=proxies, headers=headers).text
     html = BeautifulSoup(page, "html.parser")
 
     not_found = html.select_one("div.b_search p")
@@ -35,7 +36,8 @@ async def parse_books_on_page(book_name, quantity=BOOKS_ON_DOMAIN_PAGE):
 
 
 async def parse_book_details(book_page_link):
-    page = requests.get(book_page_link).text
+    proxies, headers = PROXY, HEADERS
+    page = requests.get(book_page_link, proxies=proxies, headers=headers).text
     html = BeautifulSoup(page, "html.parser")
 
     book_thumb_regex = re.compile('.*cover_type.*')
@@ -43,6 +45,7 @@ async def parse_book_details(book_page_link):
     book_title = html.find("h1", attrs={"data-widget-litres-book": 1}).text
     book_author = html.find("a", attrs={"data-widget-litres-author": 1}).text
     book_annotation = html.find("div", id="book_annotation")
+
     # Getting rid of garbage that can prevent parsing message
     book_annotation.div.decompose()
     book_annotation = re.sub("<[^>]+>", "", book_annotation.text)
@@ -140,7 +143,8 @@ async def download_manager(books, user_id, button_data, inline=False):
     return [book_title, temp_filename]
 
 async def download_file_new_format(download_page_link, user_id):
-    response = requests.get(download_page_link)
+    proxies, headers = PROXY, HEADERS
+    response = requests.get(download_page_link, proxies=proxies, headers=headers)
     page = response.text
     html = BeautifulSoup(page, "html.parser")
 
@@ -174,24 +178,13 @@ async def download_file_old_format(file_link, user_id):
 
     temp_filename += "." + format
 
-    file = requests.get(file_link).content
+    proxies, headers = PROXY, HEADERS
+    file = requests.get(file_link, proxies=proxies, headers=headers).content
 
     with open(temp_filename, "wb") as f:
         f.write(file)
 
     return temp_filename
-
-
-# async def pdf_loader(url, filename):
-#     "Download pdf from html preview mode"
-#     response = requests.get(url, stream=True)
-#     print(response)
-#     if response.status_code == 200:
-#         with open(filename, 'wb') as pdf_file:
-#             for chunk in response.iter_content(chunk_size=1024):
-#                 pdf_file.write(chunk)
-#     else:
-#         print(f"Failed to load pdf: {url}")
 
 
 async def extract_file(path):
