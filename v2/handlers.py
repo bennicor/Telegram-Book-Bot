@@ -1,19 +1,5 @@
-from ast import parse
 import os
-from pydoc import doc
-from setting import (
-    DOWNLOAD_FAIL_MESSAGE,
-    START_MESSAGE,
-    UNKNOWN_COMMAND_MESSAGE,
-    BOOKS_ON_PAGE,
-    GET_BOOK_FAIL_MESSAGE,
-    TOKEN,
-    INLINE_BOOKS_SEARCH_QUANTITY,
-    INLINE_CACHE_TIME,
-    INLINE_RAW_WIDTH,
-    BOT_STORAGE_CHANNEL_ID,
-    CAPTION_LENGTH_LOCK,
-)
+from settings import Settings
 from utils import (
     parse_book_details,
     parse_books_on_page,
@@ -36,74 +22,80 @@ logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(message)s", datefmt="%d-%b-%y %H:%M:%S"
 )
 
-# Creating bot instance to handle messages changes
-bot = Bot(token=TOKEN)
-books = {}  # Global dictionary where all users data is stored
+settings = Settings()
 
+# Creating bot instance to handle messages changes
+bot = Bot(token=settings.TOKEN)
+books = {}  # Global dictionary where all users data is stored
 
 
 async def start(message):
     chat_id = message.chat.id
-    await bot.send_message(text=START_MESSAGE, chat_id=chat_id)
+    await bot.send_message(text=settings.START_MESSAGE, chat_id=chat_id)
 
 
 async def search_book(message):
     "Sends back all the books that were found by the users query"
     global books
 
-    chat_id = message.chat.id
-    user_id = message.from_user.id
-    book_name = message.text
+    try:
+        chat_id = message.chat.id
+        user_id = message.from_user.id
+        book_name = message.text
 
-    # Saving query results
-    books.setdefault(user_id, {})
-    books[user_id]["books"] = await parse_books_on_page(book_name)
-    books[user_id]["prev_page"] = 1
+        # Saving query results
+        books.setdefault(user_id, {})
+        books[user_id]["books"] = await parse_books_on_page(book_name)
+        books[user_id]["prev_page"] = 1
 
-    if books[user_id]["books"]:
-        books_found = len(books[user_id]["books"])
-        pages_amount = ceil(books_found / BOOKS_ON_PAGE)
-        paginator = InlineKeyboardPaginator(pages_amount)
+        if books[user_id]["books"]:
+            books_found = len(books[user_id]["books"])
+            pages_amount = ceil(books_found / settings.BOOKS_ON_PAGE)
+            paginator = InlineKeyboardPaginator(pages_amount)
 
-        # Separating books on different pages by specified quantity
-        last_page_books_amount = books_found % BOOKS_ON_PAGE
-        next_page_requirements = False
-        page, books_counter = 1, 0
-        paged_message = {}
-        temp_message = f"Найдено: {books_found} книг\n\n"
+            # Separating books on different pages by specified quantity
+            last_page_books_amount = books_found % settings.BOOKS_ON_PAGE
+            next_page_requirements = False
+            page, books_counter = 1, 0
+            paged_message = {}
+            temp_message = f"Найдено: {books_found} книг\n\n"
 
-        for book_id, book in books[user_id]["books"].items():
-            temp_message += f"<b>{book['title']}</b>\n{book['author']}\nСкачать книгу: /download{book_id}\n\n"
-            books_counter += 1
+            for book_id, book in books[user_id]["books"].items():
+                temp_message += f"<b>{book['title']}</b>\n{book['author']}\nСкачать книгу: /download{book_id}\n\n"
+                books_counter += 1
 
-            # Checking if page is filled with certain amount of books
-            if books_found > BOOKS_ON_PAGE:
-                if page < pages_amount:
-                    next_page_requirements = books_counter == BOOKS_ON_PAGE
-                else:
-                    # If last page contains less than specified amount per page
-                    if last_page_books_amount > 0:
-                        next_page_requirements = books_counter == last_page_books_amount
+                # Checking if page is filled with certain amount of books
+                if books_found > settings.BOOKS_ON_PAGE:
+                    if page < pages_amount:
+                        next_page_requirements = books_counter == settings.BOOKS_ON_PAGE
                     else:
-                        next_page_requirements = books_counter == BOOKS_ON_PAGE
-            else:
-                next_page_requirements = books_counter == books_found
+                        # If last page contains less than specified amount per page
+                        if last_page_books_amount > 0:
+                            next_page_requirements = books_counter == last_page_books_amount
+                        else:
+                            next_page_requirements = books_counter == settings.BOOKS_ON_PAGE
+                else:
+                    next_page_requirements = books_counter == books_found
 
-            if next_page_requirements:
-                paged_message[page] = temp_message
-                books_counter = 0
-                page += 1
-                temp_message = f"Найдено: {books_found} книг\n\n"
+                if next_page_requirements:
+                    paged_message[page] = temp_message
+                    books_counter = 0
+                    page += 1
+                    temp_message = f"Найдено: {books_found} книг\n\n"
 
-        books[user_id]["books"]["paginator_info"] = paged_message
+            books[user_id]["books"]["paginator_info"] = paged_message
 
-        await bot.send_message(
-            chat_id=chat_id,
-            text=paged_message[1],
-            reply_markup=paginator.markup,
-            parse_mode=ParseMode.HTML,
-        )
-    else:
+            await bot.send_message(
+                chat_id=chat_id,
+                text=paged_message[1],
+                reply_markup=paginator.markup,
+                parse_mode=ParseMode.HTML,
+            )
+        else:
+            await bot.send_message(text="Ничего не найдено", chat_id=chat_id)
+    except Exception:
+        chat_id = message.chat.id
+        logging.error("Unable to download book", exc_info=True)
         await bot.send_message(text="Ничего не найдено", chat_id=chat_id)
 
 
@@ -128,12 +120,12 @@ async def download(message, book_id):
 
         book_info = f"<b>{book_details['title']}</b>\n{book_details['author']}\n\n{book_details['annotation']}"
 
-        download_keyboard = build_keyboard(book_details["formats"], book_id, "download", INLINE_RAW_WIDTH)
+        download_keyboard = build_keyboard(book_details["formats"], book_id, "download", settings.INLINE_RAW_WIDTH)
         reply_markup = InlineKeyboardMarkup(inline_keyboard=download_keyboard)
 
         # Caption length must in range of 0-1024 symbols
-        if len(book_info) > CAPTION_LENGTH_LOCK:
-            book_info = book_info[:CAPTION_LENGTH_LOCK - 3] + "..."
+        if len(book_info) > settings.CAPTION_LENGTH_LOCK:
+            book_info = book_info[:settings.CAPTION_LENGTH_LOCK - 3] + "..."
 
         await bot.send_photo(
             chat_id=chat_id,
@@ -142,10 +134,10 @@ async def download(message, book_id):
             reply_markup=reply_markup,
             parse_mode=ParseMode.HTML,
         )
-    except Exception as e:
+    except Exception:
         chat_id = message.chat.id
         logging.error("Unable to download book", exc_info=True)
-        await bot.send_message(text=GET_BOOK_FAIL_MESSAGE, chat_id=chat_id)
+        await bot.send_message(text=settings.GET_BOOK_FAIL_MESSAGE, chat_id=chat_id)
 
 
 async def inline_download(inline_query):
@@ -157,7 +149,7 @@ async def inline_download(inline_query):
     # Saving query results
     books.setdefault(user_id, {})
     books[user_id]["inline_books"] = await parse_books_on_page(
-        book_name, INLINE_BOOKS_SEARCH_QUANTITY
+        book_name, settings.INLINE_BOOKS_SEARCH_QUANTITY
     )
 
     if books[user_id]["inline_books"]:
@@ -177,10 +169,12 @@ async def inline_download(inline_query):
             book_info = f"<b>{book_details['title']}</b>\n{book_details['author']}\n\n{book_details['annotation']}"
 
             # Caption length must in range of 0-1024 symbols
-            if len(book_info) > CAPTION_LENGTH_LOCK:
-                book_info = book_info[:CAPTION_LENGTH_LOCK - 3] + "..."
+            if len(book_info) > settings.CAPTION_LENGTH_LOCK:
+                book_info = book_info[:settings.CAPTION_LENGTH_LOCK - 3] + "..."
 
-            download_keyboard = build_keyboard(book_details["formats"], book_id, "inline", INLINE_RAW_WIDTH)
+            # Adding current user id to the button data
+            # So that no one else could press this button
+            download_keyboard = build_keyboard(book_details["formats"], book_id, f"inline {user_id}", settings.INLINE_RAW_WIDTH)
             reply_markup = InlineKeyboardMarkup(inline_keyboard=download_keyboard)
 
             # A unique id for an inline item
@@ -198,7 +192,7 @@ async def inline_download(inline_query):
 
             result.append(item)
 
-        await bot.answer_inline_query(inline_query.id, results=result, cache_time=INLINE_CACHE_TIME)
+        await bot.answer_inline_query(inline_query.id, results=result, cache_time=settings.INLINE_CACHE_TIME)
 
 
 async def buttons(callback):
@@ -208,8 +202,9 @@ async def buttons(callback):
 
     if button_type == "download":
         await downloader_callback(callback)
-    elif button_type == "inline":
-        await inline_downloader_callback(callback)
+    elif "inline" in button_type:
+        author_id = int(callback_data.split()[1])
+        await inline_downloader_callback(callback, author_id)
     elif button_type == "pager":
         await pager_callback(callback)
 
@@ -283,51 +278,56 @@ async def downloader_callback(callback):
 
         # Deleting file after sending
         os.remove(temp_filename)
-    except Exception as e:
+    except Exception:
         chat_id = callback.message.chat.id
         logging.error("Unable to download book", exc_info=True)
-        await bot.send_message(text=DOWNLOAD_FAIL_MESSAGE, chat_id=chat_id)
+        await bot.send_message(text=settings.DOWNLOAD_FAIL_MESSAGE, chat_id=chat_id)
 
 
-async def inline_downloader_callback(callback):
+async def inline_downloader_callback(callback, author_id):
     "Downloads book in required format and sends back to user. Optimized for inline mode"
     try:
         global books
 
         inline_message_id = callback.inline_message_id
-        user_id = callback.from_user.id
+        user_id = callback.from_user.id # Id of user, who pressed the button in the chat
 
-        await callback.answer()
-        button_data = callback.data
 
-        # Downloading book and getting a file location
-        book_title, temp_filename = await download_manager(books, user_id, button_data, inline=True)
+        # Only user, who sent this message can press buttons
+        if author_id != user_id:
+            await callback.answer("Только автор сообщения может выбрать формат для скачивания", show_alert=True)
+        else:
+            await callback.answer()
+            button_data = callback.data
+            
+            # Downloading book and getting a file location
+            book_title, temp_filename = await download_manager(books, user_id, button_data, inline=True)
 
-        # Sending file to private group to cache file
-        # and get access to it later via file_id
-        infodoc = await bot.send_document(
-            chat_id=BOT_STORAGE_CHANNEL_ID,
-            document=open(temp_filename, "rb"),
-            caption=book_title,
-        )
-        
-        document_file_id = infodoc["document"]["file_id"]
-        media = InputMediaDocument(media=document_file_id, caption=book_title)
-        
-        # Attaching book to the message
-        await bot.edit_message_media(
-            inline_message_id=inline_message_id,
-            media=media,
-            reply_markup=InlineKeyboardMarkup([]), # Closing keyboard
-        )
+            # Sending file to private group to cache file
+            # and get access to it later via file_id
+            infodoc = await bot.send_document(
+                chat_id=settings.BOT_STORAGE_CHANNEL_ID,
+                document=open(temp_filename, "rb"),
+                caption=book_title,
+            )
+            
+            document_file_id = infodoc["document"]["file_id"]
+            media = InputMediaDocument(media=document_file_id, caption=book_title)
+            
+            # Attaching book to the message
+            await bot.edit_message_media(
+                inline_message_id=inline_message_id,
+                media=media,
+                reply_markup=InlineKeyboardMarkup([]), # Closing keyboard
+            )
 
-        # Deleting file after sending
-        os.remove(temp_filename)
-    except Exception as e:
+            # Deleting file after sending
+            os.remove(temp_filename)
+    except Exception:
         logging.error("Unable to download book", exc_info=True)
         await bot.edit_message_text(
             inline_message_id=inline_message_id,
-            text=DOWNLOAD_FAIL_MESSAGE,
+            text=settings.DOWNLOAD_FAIL_MESSAGE,
             reply_markup=InlineKeyboardMarkup([]), # Closing keyboard
         )
 
@@ -341,12 +341,12 @@ async def command_handler(message):
         try:
             book_id = int(command[len("download") + 1 :])
             await download(message, book_id)
-        except Exception as e:
+        except Exception:
             logging.error("Couldn't get book id", exc_info=True)
             await bot.send_message(
-                text=GET_BOOK_FAIL_MESSAGE, chat_id=chat_id
+                text=settings.GET_BOOK_FAIL_MESSAGE, chat_id=chat_id
             )
     else:
         await bot.send_message(
-            text=UNKNOWN_COMMAND_MESSAGE, chat_id=chat_id
+            text=settings.UNKNOWN_COMMAND_MESSAGE, chat_id=chat_id
         )
